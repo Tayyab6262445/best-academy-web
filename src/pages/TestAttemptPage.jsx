@@ -4,21 +4,34 @@ import { useSelector } from 'react-redux'
 import { selectCurrentUser } from '../features/auth/authSlice'
 import { useGetTestByIdQuery, useSubmitTestMutation } from '../api/attemptApi'
 import Icon from '../components/Icon'
-import Pressable from '../components/Pressable'
-import Spinner from '../components/Spinner'
-import { useAlert } from '../components/AlertProvider'
+import Button from '../components/ui/button'
+import { Card } from '../components/ui/card'
+import { Skeleton } from '../components/ui/skeleton'
+import { toast } from '../components/ui/use-toast'
+import { cn } from '../lib/cn'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog'
+import { Dialog, DialogContent } from '../components/ui/dialog'
 
 export default function TestAttemptPage() {
   const [searchParams] = useSearchParams()
   const testId = searchParams.get('testId')
   const navigate = useNavigate()
   const user = useSelector(selectCurrentUser)
-  const { alert, confirm } = useAlert()
 
   const { data: testData, isLoading: isFetching } = useGetTestByIdQuery(testId, { skip: !testId })
   const [submitTest, { isLoading: isSubmitting }] = useSubmitTestMutation()
 
   const [selectedAnswers, setSelectedAnswers] = useState({})
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [showResult, setShowResult] = useState(false)
   const [testResult, setTestResult] = useState(null)
 
@@ -26,20 +39,17 @@ export default function TestAttemptPage() {
     setSelectedAnswers((prev) => ({ ...prev, [questionId]: option }))
   }
 
-  const handleFinalSubmit = async () => {
-    const answeredCount = Object.keys(selectedAnswers).length
+  const answeredCount = Object.keys(selectedAnswers).length
+
+  const handleRequestSubmit = () => {
     if (answeredCount === 0) {
-      await alert('Wait!', 'Please answer at least one question before submitting.')
+      toast({ variant: 'destructive', title: 'Wait!', description: 'Please answer at least one question before submitting.' })
       return
     }
+    setConfirmOpen(true)
+  }
 
-    const confirmed = await confirm(
-      'Confirm Submission',
-      `You have answered ${answeredCount} questions. Do you want to submit?`,
-      { confirmText: 'Submit' }
-    )
-    if (!confirmed) return
-
+  const performSubmit = async () => {
     const formattedAnswers = Object.entries(selectedAnswers).map(([qId, opt]) => ({
       questionId: qId,
       selectedOption: opt,
@@ -57,15 +67,21 @@ export default function TestAttemptPage() {
       setTestResult(response.result)
       setShowResult(true)
     } catch (error) {
-      await alert('Error', error?.data?.message || 'Failed to submit test')
+      toast({ variant: 'destructive', title: 'Error', description: error?.data?.message || 'Failed to submit test' })
     }
   }
 
   if (isFetching) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#F8FAFC]">
-        <Spinner size="large" color="#E31E24" />
-        <p className="mt-2.5 text-slate-500">Loading Test...</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50">
+        <div className="w-full max-w-2xl px-5">
+          <Skeleton className="h-6 w-40" />
+          <div className="mt-5 flex flex-col gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-40 w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -73,110 +89,118 @@ export default function TestAttemptPage() {
   const test = testData?.data
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-5">
-        <Pressable onClick={() => navigate(-1)}>
-          <Icon name="close" size={28} color="#0F172A" />
-        </Pressable>
-        <h1 className="mx-2.5 flex-1 truncate text-center text-lg font-extrabold text-[#0F172A]">
-          {test?.title}
-        </h1>
-        <div className="w-7" />
+    <div className="min-h-screen bg-slate-50">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Close">
+          <Icon name="close" size={20} />
+        </Button>
+        <h1 className="mx-2.5 flex-1 truncate text-center text-sm font-semibold text-slate-900">{test?.title}</h1>
+        <div className="w-9" />
       </div>
 
       <div className="mx-auto max-w-2xl p-5 pb-12">
         {test?.mcqs.map((mcq, index) => (
-          <div key={mcq._id} className="mb-5 rounded-[20px] bg-white p-5 shadow-sm">
-            <p className="mb-5 text-base font-bold leading-6 text-[#1E293B]">
+          <Card key={mcq._id} className="mb-4 p-5">
+            <p className="mb-4 text-sm font-semibold leading-6 text-slate-900">
               <span className="text-academyRed">Q{index + 1}.</span> {mcq.questionText}
             </p>
 
-            {Object.entries(mcq.options).map(([key, value]) => {
-              const isSelected = selectedAnswers[mcq._id] === key
-              return (
-                <Pressable
-                  key={key}
-                  onClick={() => handleSelect(mcq._id, key)}
-                  className={`mb-2.5 flex w-full items-center rounded-xl border-[1.5px] p-[15px] text-left ${
-                    isSelected ? 'border-academyRed bg-red-50' : 'border-slate-100 bg-[#F8FAFC]'
-                  }`}
-                >
-                  <span
-                    className={`mr-3 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                      isSelected ? 'border-academyRed' : 'border-slate-300'
-                    }`}
+            <div className="flex flex-col gap-2">
+              {Object.entries(mcq.options).map(([key, value]) => {
+                const isSelected = selectedAnswers[mcq._id] === key
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleSelect(mcq._id, key)}
+                    className={cn(
+                      'flex w-full items-center rounded-md border p-3 text-left transition-colors',
+                      isSelected ? 'border-academyRed bg-red-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                    )}
                   >
-                    {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-academyRed" />}
-                  </span>
-                  <span
-                    className={`flex-1 text-[15px] font-medium ${
-                      isSelected ? 'font-bold text-academyRed' : 'text-slate-600'
-                    }`}
-                  >
-                    {value}
-                  </span>
-                </Pressable>
-              )
-            })}
-          </div>
+                    <span
+                      className={cn(
+                        'mr-3 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2',
+                        isSelected ? 'border-academyRed' : 'border-slate-300'
+                      )}
+                    >
+                      {isSelected && <span className="h-2 w-2 rounded-full bg-academyRed" />}
+                    </span>
+                    <span className={cn('flex-1 text-sm', isSelected ? 'font-semibold text-academyRed' : 'text-slate-600')}>
+                      {value}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </Card>
         ))}
 
-        <Pressable
-          onClick={handleFinalSubmit}
-          disabled={isSubmitting}
-          className="mt-2.5 flex w-full items-center justify-center rounded-[18px] bg-academyRed py-5"
-        >
-          {isSubmitting ? (
-            <Spinner size="small" color="#fff" />
-          ) : (
-            <span className="text-base font-black tracking-widest text-white">FINISH AND SUBMIT</span>
-          )}
-        </Pressable>
+        <Button size="lg" className="mt-2 w-full" disabled={isSubmitting} onClick={handleRequestSubmit}>
+          {isSubmitting ? 'Submitting…' : 'Finish and submit'}
+        </Button>
       </div>
 
-      {/* Result modal */}
-      {showResult && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(15,23,42,0.8)] p-5">
-          <div className="w-full max-w-sm rounded-[30px] bg-white p-[30px] text-center">
-            <div className="mb-5">
-              <Icon name="checkmark-circle" size={80} color="#22C55E" />
-            </div>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm submission</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have answered {answeredCount} question{answeredCount === 1 ? '' : 's'}. Do you want to submit?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={performSubmit}>Submit</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-            <h2 className="mb-[25px] text-2xl font-black text-[#0F172A]">Test Submitted!</h2>
-
-            <div className="mb-[30px] flex w-full justify-around">
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase text-slate-500">Score</p>
-                <p className="text-lg font-extrabold text-[#0F172A]">
-                  {testResult?.obtainedMarks} / {testResult?.totalMarks}
-                </p>
-              </div>
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase text-slate-500">Correct</p>
-                <p className="text-lg font-extrabold text-[#22C55E]">{testResult?.correctAnswers}</p>
-              </div>
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase text-slate-500">Wrong</p>
-                <p className="text-lg font-extrabold text-academyRed">{testResult?.wrongAnswers}</p>
-              </div>
-            </div>
-
-            <div className="mb-[30px] inline-block rounded-full bg-[#F1F5F9] px-[25px] py-2.5">
-              <span className="text-xl font-black text-academyRed">{testResult?.percentage}%</span>
-            </div>
-
-            <Pressable
-              onClick={() => {
-                setShowResult(false)
-                navigate('/quizzes', { replace: true })
-              }}
-              className="w-full rounded-2xl bg-[#0F172A] py-[15px]"
-            >
-              <span className="text-base font-bold text-white">Back to Dashboard</span>
-            </Pressable>
+      <Dialog
+        open={showResult}
+        onOpenChange={(open) => {
+          setShowResult(open)
+          if (!open) navigate('/quizzes', { replace: true })
+        }}
+      >
+        <DialogContent showClose={false} className="text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
+            <Icon name="checkmark-circle" size={36} className="text-green-500" />
           </div>
-        </div>
-      )}
+
+          <h2 className="text-xl font-semibold text-slate-900">Test submitted!</h2>
+
+          <div className="flex w-full justify-around">
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase text-slate-500">Score</p>
+              <p className="text-base font-semibold text-slate-900">
+                {testResult?.obtainedMarks} / {testResult?.totalMarks}
+              </p>
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase text-slate-500">Correct</p>
+              <p className="text-base font-semibold text-green-600">{testResult?.correctAnswers}</p>
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase text-slate-500">Wrong</p>
+              <p className="text-base font-semibold text-academyRed">{testResult?.wrongAnswers}</p>
+            </div>
+          </div>
+
+          <div className="mx-auto inline-block rounded-full bg-slate-100 px-5 py-2">
+            <span className="text-lg font-semibold text-academyRed">{testResult?.percentage}%</span>
+          </div>
+
+          <Button
+            className="w-full"
+            onClick={() => {
+              setShowResult(false)
+              navigate('/quizzes', { replace: true })
+            }}
+          >
+            Back to quizzes
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

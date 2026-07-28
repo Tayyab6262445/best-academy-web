@@ -2,11 +2,12 @@ import { Suspense, lazy } from 'react'
 import { Provider } from 'react-redux'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { store } from './app/store'
-import { AlertProvider } from './components/AlertProvider'
 import ErrorBoundary from './components/ErrorBoundary'
 import ProtectedRoute from './components/ProtectedRoute'
-import TabLayout from './layouts/TabLayout'
+import AppShell from './layouts/AppShell'
 import Spinner from './components/Spinner'
+import { Toaster } from './components/ui/toaster'
+import { TooltipProvider } from './components/ui/tooltip'
 
 import Gateway from './pages/Gateway'
 import LoginPage from './pages/LoginPage'
@@ -36,7 +37,8 @@ function App() {
   return (
     <ErrorBoundary>
       <Provider store={store}>
-        <AlertProvider>
+        <TooltipProvider delayDuration={200}>
+          <Toaster />
           <BrowserRouter>
             <Suspense fallback={<PageFallback />}>
               <Routes>
@@ -44,19 +46,19 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
 
                 <Route element={<ProtectedRoute />}>
-                  <Route element={<TabLayout />}>
+                  <Route element={<AppShell />}>
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/attendance" element={<AttendancePage />} />
                     <Route path="/results" element={<ResultsPage />} />
                     <Route path="/quizzes" element={<QuizzesPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/courses" element={<CoursesPage />} />
+                    <Route path="/attempted-tests" element={<AttemptedTestsPage />} />
+                    <Route path="/quiz-result" element={<QuizResultPage />} />
+                    <Route path="/review-test" element={<ReviewTestPage />} />
                   </Route>
 
-                  <Route path="/courses" element={<CoursesPage />} />
                   <Route path="/pdf-viewer" element={<PdfViewerPage />} />
-                  <Route path="/attempted-tests" element={<AttemptedTestsPage />} />
-                  <Route path="/quiz-result" element={<QuizResultPage />} />
-                  <Route path="/review-test" element={<ReviewTestPage />} />
                   <Route path="/test-attempt" element={<TestAttemptPage />} />
                 </Route>
 
@@ -64,7 +66,7 @@ function App() {
               </Routes>
             </Suspense>
           </BrowserRouter>
-        </AlertProvider>
+        </TooltipProvider>
       </Provider>
     </ErrorBoundary>
   )

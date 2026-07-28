@@ -4,11 +4,18 @@ import { useSelector } from 'react-redux'
 import { selectCurrentUser } from '../features/auth/authSlice'
 import { useGetAttendanceQuery, useGetProfileQuery } from '../api/authApi'
 import Icon from '../components/Icon'
-import Pressable from '../components/Pressable'
-import Spinner from '../components/Spinner'
-import logo from '../assets/logo.png'
+import { Card } from '../components/ui/card'
+import { Skeleton } from '../components/ui/skeleton'
+import SectionHeader from '../components/SectionHeader'
 
 const BARS = [30, 60, 45, 100, 70, 85, 95]
+
+const ACTIONS = [
+  { title: 'Attempted Quiz', subText: 'Grade Card', icon: 'analytics-outline', color: 'bg-indigo-600', to: '/attempted-tests' },
+  { title: 'Quiz Result', subText: 'Result Logs', icon: 'calendar-clear-outline', color: 'bg-emerald-600', to: '/quiz-result' },
+  { title: 'Courses', subText: 'Study Material', icon: 'library-outline', color: 'bg-amber-600', to: '/courses' },
+  { title: 'Profile', subText: 'Bio Data', icon: 'finger-print-outline', color: 'bg-slate-800', to: '/profile' },
+]
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -23,77 +30,65 @@ export default function DashboardPage() {
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours()
-    if (hour < 12) return 'Good Morning'
-    if (hour < 18) return 'Good Afternoon'
-    return 'Good Evening'
+    if (hour < 12) return 'Good morning'
+    if (hour < 18) return 'Good afternoon'
+    return 'Good evening'
   }, [])
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white">
-        <Spinner size="large" color="#E31E24" />
-        <p className="mt-4 text-[10px] font-medium uppercase tracking-widest text-slate-400">
-          Syncing Academy Data
-        </p>
+      <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-3">
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-56 w-full rounded-xl" />
+          <div className="grid grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
+        <Skeleton className="h-56 w-full rounded-lg" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-3xl px-6 pb-10">
-        {/* Header */}
-        <div className="mt-4 mb-8 flex items-center justify-between">
-          <div className="flex items-center">
-            <img src={logo} alt="Best Academy" className="mr-4 h-14 w-14 object-contain" />
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[1px] text-slate-400">
-                {greeting}
-              </p>
-              <p className="text-xl font-black tracking-tight text-slate-900">
-                {profile?.firstName || 'Student'}
-              </p>
-            </div>
-          </div>
-
-          <div className="relative rounded-2xl bg-slate-900 p-3 shadow-md">
-            <Icon name="notifications-outline" size={20} color="white" />
-            <span className="absolute top-3 right-3 h-2.5 w-2.5 rounded-full border-2 border-slate-900 bg-academyRed" />
-          </div>
+    <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-3">
+      <div className="flex flex-col gap-6 lg:col-span-2">
+        <div>
+          <p className="text-sm font-medium text-slate-500">
+            {greeting}, {profile?.firstName || 'Student'}
+          </p>
+          <h2 className="mt-0.5 text-xl font-semibold text-slate-900">Here's your academy snapshot</h2>
         </div>
 
-        {/* Attendance Card */}
-        <div className="relative mb-8 overflow-hidden rounded-[40px] bg-slate-900 p-7 shadow-2xl shadow-slate-400">
+        {/* Attendance hero */}
+        <div className="relative overflow-hidden rounded-xl bg-slate-900 p-6 shadow-card">
           <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/5" />
 
-          <div className="mb-8 flex items-start justify-between">
+          <div className="mb-6 flex items-start justify-between">
             <div>
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-white/50">
-                Current Attendance
-              </p>
-              <p className="text-4xl font-black text-white">
-                {attendance?.summary?.attendanceRate || '0%'}
-              </p>
+              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-white/50">Current Attendance</p>
+              <p className="text-3xl font-semibold text-white">{attendance?.summary?.attendanceRate || '0%'}</p>
             </div>
-            <div className="rounded-xl bg-academyRed px-3 py-1.5">
-              <p className="text-[9px] font-black uppercase tracking-tighter text-white">
-                Academic Year {new Date().getFullYear().toString().slice(-2)}
+            <div className="rounded-md bg-academyRed px-2.5 py-1">
+              <p className="text-[11px] font-semibold text-white">
+                AY {new Date().getFullYear().toString().slice(-2)}
               </p>
             </div>
           </div>
 
-          <div className="mb-8 flex h-16 items-end justify-between px-1">
+          <div className="mb-6 flex h-16 items-end justify-between px-1">
             {BARS.map((height, i) => (
-              <div key={i} className="flex items-center">
-                <div
-                  style={{ height: `${height}%` }}
-                  className={`w-1.5 rounded-full ${i === 6 ? 'bg-academyRed' : 'bg-white/10'}`}
-                />
-              </div>
+              <div
+                key={i}
+                style={{ height: `${height}%` }}
+                className={`w-1.5 rounded-full ${i === 6 ? 'bg-academyRed' : 'bg-white/10'}`}
+              />
             ))}
           </div>
 
-          <div className="flex justify-between border-t border-white/5 pt-6">
+          <div className="flex justify-between border-t border-white/10 pt-5">
             <StatBox label="Present" value={attendance?.summary?.present} dotColor="bg-green-500" />
             <StatBox label="Absent" value={attendance?.summary?.absent} dotColor="bg-red-500" />
             <StatBox label="Leaves" value={attendance?.summary?.leave} dotColor="bg-amber-500" />
@@ -101,86 +96,57 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick actions */}
-        <SectionTitle title="Portal Services" />
-        <div className="mb-4 grid grid-cols-2 gap-x-4 lg:grid-cols-4">
-          <ActionButton
-            title="Attempted Quiz"
-            icon="analytics-outline"
-            color="bg-indigo-600"
-            onClick={() => navigate('/attempted-tests')}
-            subText="Grade Card"
-          />
-          <ActionButton
-            title="Quiz Result"
-            icon="calendar-clear-outline"
-            color="bg-emerald-600"
-            onClick={() => navigate('/quiz-result')}
-            subText="Result Logs"
-          />
-          <ActionButton
-            title="Courses"
-            icon="library-outline"
-            color="bg-amber-600"
-            onClick={() => navigate('/courses')}
-            subText="Study Material"
-          />
-          <ActionButton
-            title="Profile"
-            icon="finger-print-outline"
-            color="bg-slate-800"
-            onClick={() => navigate('/profile')}
-            subText="Bio Data"
-          />
+        <div>
+          <SectionHeader title="Portal Services" className="mb-4" />
+          <div className="grid grid-cols-2 gap-4">
+            {ACTIONS.map((action) => (
+              <ActionCard key={action.to} {...action} onClick={() => navigate(action.to)} />
+            ))}
+          </div>
         </div>
+      </div>
 
-        {/* Notice board */}
-        <SectionTitle title="Academy Notice Board" />
-        <Pressable
+      {/* Right rail */}
+      <div>
+        <SectionHeader title="Notice Board" className="mb-4" />
+        <button
           onClick={() => navigate('/results')}
-          className="mb-12 flex w-full items-center rounded-[35px] border border-slate-100 bg-white p-6 text-left shadow-sm"
+          className="flex w-full items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-left shadow-card transition-colors hover:border-slate-300"
         >
-          <div className="rounded-2xl bg-red-50 p-4">
-            <Icon name="megaphone" size={24} color="#E31E24" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-red-50">
+            <Icon name="megaphone" size={18} className="text-academyRed" />
           </div>
-          <div className="ml-4 flex-1">
-            <p className="text-base font-bold text-slate-900">New Result Published</p>
-            <p className="text-xs font-medium text-slate-400">MDCAT Mock Test Round 1 is live.</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-900">New Result Published</p>
+            <p className="mt-0.5 text-xs text-slate-500">MDCAT Mock Test Round 1 is live.</p>
           </div>
-          <div className="rounded-full bg-slate-50 p-2">
-            <Icon name="chevron-forward" size={18} color="#64748b" />
-          </div>
-        </Pressable>
+          <Icon name="chevron-forward" size={16} className="mt-1 shrink-0 text-slate-400" />
+        </button>
       </div>
     </div>
   )
 }
 
-const SectionTitle = ({ title }) => (
-  <div className="mb-5 ml-1 flex items-center">
-    <div className="mr-2 h-1.5 w-1.5 rounded-full bg-academyRed" />
-    <p className="text-[11px] font-black uppercase tracking-[1.5px] text-slate-900">{title}</p>
-  </div>
-)
-
 const StatBox = ({ label, value, dotColor }) => (
-  <div className="flex items-center">
-    <div className={`mr-2 h-1.5 w-1.5 rounded-full ${dotColor}`} />
+  <div className="flex items-center gap-2">
+    <div className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
     <div>
-      <p className="text-sm font-black text-white">{value || 0}</p>
-      <p className="text-[8px] font-bold uppercase tracking-tighter text-white/30">{label}</p>
+      <p className="text-sm font-semibold text-white">{value || 0}</p>
+      <p className="text-[11px] text-white/40">{label}</p>
     </div>
   </div>
 )
 
-const ActionButton = ({ title, icon, color, onClick, subText }) => (
-  <Pressable
+const ActionCard = ({ title, icon, color, subText, onClick }) => (
+  <Card
+    as="button"
     onClick={onClick}
-    className="mb-6 rounded-[35px] border border-slate-100 bg-white p-6 text-left shadow-sm shadow-slate-200"
+    className="flex flex-col items-start p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-popover"
   >
-    <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-[18px] ${color} shadow-lg`}>
-      <Icon name={icon} size={22} color="white" />
+    <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-md ${color}`}>
+      <Icon name={icon} size={18} className="text-white" />
     </div>
-    <p className="text-[15px] font-black tracking-tight text-slate-900">{title}</p>
-    <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">{subText}</p>
-  </Pressable>
+    <p className="text-sm font-semibold text-slate-900">{title}</p>
+    <p className="mt-0.5 text-xs text-slate-500">{subText}</p>
+  </Card>
 )

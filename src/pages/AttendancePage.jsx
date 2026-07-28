@@ -3,25 +3,20 @@ import { useSelector } from 'react-redux'
 import { selectCurrentUser } from '../features/auth/authSlice'
 import { useGetAttendanceQuery } from '../api/authApi'
 import Icon from '../components/Icon'
-import Pressable from '../components/Pressable'
-import Spinner from '../components/Spinner'
-import logo from '../assets/logo.png'
+import Button from '../components/ui/button'
+import StatCard from '../components/StatCard'
+import EmptyState from '../components/EmptyState'
+import { Skeleton } from '../components/ui/skeleton'
+import { Badge } from '../components/ui/badge'
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import dayjs from 'dayjs'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const STATUSES = ['', 'Present', 'Absent', 'Leave']
 
-const getStatusColor = (status) => {
-  switch (status) {
-    case 'Present':
-      return 'bg-green-500'
-    case 'Absent':
-      return 'bg-red-500'
-    case 'Leave':
-      return 'bg-amber-500'
-    default:
-      return 'bg-slate-400'
-  }
-}
+const STATUS_VARIANT = { Present: 'success', Absent: 'danger', Leave: 'warning' }
 
 export default function AttendancePage() {
   const user = useSelector(selectCurrentUser)
@@ -126,155 +121,145 @@ export default function AttendancePage() {
     printWindow.onload = () => printWindow.print()
   }
 
+  const records = data?.records || []
+
   return (
-    <div className="min-h-screen bg-white px-5">
-      <div className="mx-auto max-w-3xl">
-        {/* Page Header */}
-        <div className="mb-5 mt-2 flex items-center justify-between">
-          <img src={logo} alt="Best Academy" className="h-14 w-14 object-contain" />
-          <p className="ml-2 text-2xl font-bold text-slate-900">Attendance History</p>
-          <Pressable
-            onClick={exportToPDF}
-            className="flex items-center rounded-2xl bg-slate-900 px-4 py-2.5 shadow-sm shadow-slate-400"
-          >
-            <Icon name="share-outline" size={18} color="#fff" />
-            <span className="ml-2 text-xs font-bold text-white">Share PDF</span>
-          </Pressable>
+    <div className="flex flex-col gap-6 p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Attendance History</h2>
+          <p className="text-sm text-slate-500">{data?.student?.class || 'Current session'}</p>
         </div>
+        <Button variant="outline" onClick={exportToPDF}>
+          <Icon name="share-outline" size={16} />
+          Share PDF
+        </Button>
+      </div>
 
-        {/* Student Card */}
-        <div className="mb-6 rounded-[32px] bg-slate-900 p-6 shadow-xl shadow-slate-900/20">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="mb-2 inline-block rounded-md bg-academyRed/20 px-2 py-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-tighter text-academyRed">
-                  Verified Student
-                </span>
-              </div>
-              <p className="text-2xl font-bold leading-tight text-white">{user?.name}</p>
-              <p className="mt-0.5 text-sm text-slate-400">{data?.student?.class}</p>
-              <div className="mt-3 flex items-center">
-                <Icon name="barcode-outline" size={14} color="#64748b" />
-                <span className="ml-1 font-mono text-xs uppercase text-slate-500">
-                  {data?.student?.rollNumber}
-                </span>
-              </div>
-            </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard icon="stats-chart" tone="brand" label="Attendance Rate" value={data?.summary?.attendanceRate || '0%'} />
+        <StatCard icon="checkmark-circle" tone="success" label="Present" value={data?.summary?.present ?? 0} />
+        <StatCard icon="close-circle" tone="danger" label="Absent" value={data?.summary?.absent ?? 0} />
+        <StatCard icon="time-outline" tone="warning" label="Leave" value={data?.summary?.leave ?? 0} />
+      </div>
 
-            <div className="flex flex-col items-center justify-center">
-              <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-[6px] border-slate-800">
-                <div
-                  className="absolute h-20 w-20 rounded-full border-[6px] border-academyRed"
-                  style={{
-                    borderBottomColor: 'transparent',
-                    borderLeftColor: 'transparent',
-                    transform: 'rotate(45deg)',
-                  }}
-                />
-                <span className="text-lg font-black text-white">
-                  {Math.floor(parseFloat(data?.summary?.attendanceRate) || 0)}%
-                </span>
-              </div>
-              <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                Rate
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Filters — desktop: Select + Tabs, mobile: horizontal chips */}
+      <div className="hidden items-center justify-between sm:flex">
+        <Tabs value={selectedStatus || 'all'} onValueChange={(v) => setSelectedStatus(v === 'all' ? '' : v)}>
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="Present">Present</TabsTrigger>
+            <TabsTrigger value="Absent">Absent</TabsTrigger>
+            <TabsTrigger value="Leave">Leave</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-        {/* Summary stats */}
-        <div className="mb-8 flex justify-between">
-          <div className="w-[30%] items-center rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-center">
-            <p className="text-lg font-bold text-green-600">{data?.summary?.present}</p>
-            <p className="text-[10px] font-bold uppercase text-green-600/60">Present</p>
-          </div>
-          <div className="w-[30%] items-center rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-center">
-            <p className="text-lg font-bold text-red-600">{data?.summary?.absent}</p>
-            <p className="text-[10px] font-bold uppercase text-red-600/60">Absent</p>
-          </div>
-          <div className="w-[30%] items-center rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-center">
-            <p className="text-lg font-bold text-amber-600">{data?.summary?.leave}</p>
-            <p className="text-[10px] font-bold uppercase text-amber-600/60">Leave</p>
-          </div>
-        </div>
+        <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
+          <SelectTrigger className="w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {MONTHS.map((m, i) => (
+              <SelectItem key={m} value={String(i + 1)}>
+                {m} 2026
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-        {/* Controls */}
-        <div className="mb-2 flex items-end justify-between">
-          <p className="text-lg font-bold text-slate-900">Filter History</p>
-          <p className="mb-1 text-[10px] font-bold uppercase text-slate-400">2026</p>
-        </div>
-
-        <div className="no-scrollbar mb-5 flex gap-3 overflow-x-auto py-1">
+      <div className="flex flex-col gap-3 sm:hidden">
+        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
           {MONTHS.map((m, i) => (
-            <Pressable
+            <button
               key={m}
               onClick={() => setSelectedMonth(i + 1)}
-              className={`shrink-0 rounded-2xl border px-6 py-2.5 ${
+              className={`shrink-0 rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
                 selectedMonth === i + 1
-                  ? 'border-slate-900 bg-slate-900 shadow-md shadow-slate-400'
-                  : 'border-slate-100 bg-white'
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 bg-white text-slate-500'
               }`}
             >
-              <span className={`font-bold ${selectedMonth === i + 1 ? 'text-white' : 'text-slate-400'}`}>
-                {m}
-              </span>
-            </Pressable>
+              {m}
+            </button>
           ))}
         </div>
-
-        <div className="mb-4 flex rounded-[22px] bg-slate-100 p-1.5">
-          {['', 'Present', 'Absent', 'Leave'].map((s) => (
-            <Pressable
+        <div className="flex rounded-md bg-slate-100 p-1">
+          {STATUSES.map((s) => (
+            <button
               key={s}
               onClick={() => setSelectedStatus(s)}
-              className={`flex-1 rounded-[18px] py-3 ${selectedStatus === s ? 'bg-white shadow-sm' : ''}`}
+              className={`flex-1 rounded-sm py-2 text-xs font-semibold transition-colors ${
+                selectedStatus === s ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
+              }`}
             >
-              <span
-                className={`block text-center text-[10px] font-black ${
-                  selectedStatus === s ? 'text-slate-900' : 'text-slate-400'
-                }`}
-              >
-                {s === '' ? 'ALL' : s.toUpperCase()}
-              </span>
-            </Pressable>
+              {s === '' ? 'ALL' : s.toUpperCase()}
+            </button>
           ))}
         </div>
+      </div>
 
-        {/* Records */}
-        {isLoading ? (
-          <div className="flex justify-center py-10">
-            <Spinner size="large" color="#E31E24" />
+      {/* Records */}
+      {isLoading ? (
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : records.length === 0 ? (
+        <EmptyState icon="calendar-outline" title="No records found" description="No attendance records for this period." />
+      ) : (
+        <>
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Session</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {records.map((item) => (
+                  <TableRow key={item._id}>
+                    <TableCell className="font-medium text-slate-900">
+                      {dayjs(item.date).format('ddd, DD MMM YYYY')}
+                    </TableCell>
+                    <TableCell className="text-slate-500">Morning Session</TableCell>
+                    <TableCell>
+                      <Badge variant={STATUS_VARIANT[item.status] || 'neutral'}>{item.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        ) : (data?.records || []).length === 0 ? (
-          <div className="mt-10 flex flex-col items-center">
-            <Icon name="calendar-outline" size={60} color="#CBD5E1" />
-            <p className="mt-4 text-slate-400">No records found for this period.</p>
-          </div>
-        ) : (
-          <div className="pb-10">
-            {data.records.map((item) => (
+
+          {/* Mobile card list */}
+          <div className="flex flex-col gap-2 md:hidden">
+            {records.map((item) => (
               <div
                 key={item._id}
-                className="mb-3 flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4"
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4"
               >
                 <div>
-                  <p className="font-bold text-slate-900">{dayjs(item.date).format('ddd, DD MMM YYYY')}</p>
+                  <p className="text-sm font-semibold text-slate-900">{dayjs(item.date).format('ddd, DD MMM YYYY')}</p>
                   <p className="text-xs text-slate-400">Morning Session</p>
                 </div>
-                <div className={`rounded-full px-4 py-1 ${getStatusColor(item.status)}`}>
-                  <span className="text-xs font-bold text-white">{item.status}</span>
-                </div>
+                <Badge variant={STATUS_VARIANT[item.status] || 'neutral'}>{item.status}</Badge>
               </div>
             ))}
-            <div ref={sentinelRef} className="h-4" />
-            {isFetching && (
-              <div className="flex justify-center py-4">
-                <Spinner size="large" color="#E31E24" />
-              </div>
-            )}
           </div>
-        )}
-      </div>
+
+          <div ref={sentinelRef} className="h-1" />
+          {isFetching && (
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-12 w-full" />
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

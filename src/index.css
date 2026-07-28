@@ -28,11 +28,4 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-
-  .safe-top {
-    padding-top: env(safe-area-inset-top);
-  }
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
 }
