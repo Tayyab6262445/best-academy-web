@@ -12,7 +12,10 @@ import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
 
 // Note: expo-screen-capture's screenshot-prevention (used in the RN app to
 // discourage sharing course PDFs) has no browser equivalent — omitted, see
-// TICKETS.md TICKET-11.
+// TICKETS.md TICKET-11. Downloading is deterred instead: documents render in
+// our own canvas-based viewer (PdfCanvasViewer, no iframe/native PDF plugin,
+// so no built-in download/print controls exist), and the raw file URL is
+// passed via router state rather than a visible/bookmarkable query string.
 export default function CoursesPage() {
   const user = useSelector(selectCurrentUser)
   const navigate = useNavigate()
@@ -33,6 +36,10 @@ export default function CoursesPage() {
 
   const pdfs = pdfData?.data?.pdfs
   const subjects = subjectsData?.data || []
+
+  const handleOpenPdf = (pdf) => {
+    navigate('/pdf-viewer', { state: { url: pdf.fileUrl, title: pdf.title } })
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -95,9 +102,7 @@ export default function CoursesPage() {
             <Card
               as="button"
               key={item._id}
-              onClick={() =>
-                navigate(`/pdf-viewer?fileUrl=${encodeURIComponent(item.fileUrl)}&title=${encodeURIComponent(item.title)}`)
-              }
+              onClick={() => handleOpenPdf(item)}
               className="flex items-center gap-3 p-4 transition-all hover:-translate-y-0.5 hover:shadow-popover"
             >
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-red-50">
