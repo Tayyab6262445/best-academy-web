@@ -19,6 +19,7 @@ export default function PdfCanvasViewer({ url, className = '' }) {
   const [numPages, setNumPages] = useState(0)
   const [pageNumber, setPageNumber] = useState(1)
   const [status, setStatus] = useState('loading') // 'loading' | 'ready' | 'error'
+  const [errorMessage, setErrorMessage] = useState('')
   const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
@@ -34,8 +35,12 @@ export default function PdfCanvasViewer({ url, className = '' }) {
         setNumPages(pdf.numPages)
         setStatus('ready')
       })
-      .catch(() => {
-        if (!cancelled) setStatus('error')
+      .catch((error) => {
+        console.error('PdfCanvasViewer: failed to load document', url, error)
+        if (!cancelled) {
+          setStatus('error')
+          setErrorMessage(error?.message || String(error))
+        }
       })
 
     return () => {
@@ -74,8 +79,9 @@ export default function PdfCanvasViewer({ url, className = '' }) {
 
   if (status === 'error') {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="text-sm text-slate-500">Couldn't load this document.</p>
+        {errorMessage && <p className="max-w-md text-xs text-slate-400">{errorMessage}</p>}
         <Button variant="outline" size="sm" onClick={() => setRetryCount((c) => c + 1)}>
           Try again
         </Button>
