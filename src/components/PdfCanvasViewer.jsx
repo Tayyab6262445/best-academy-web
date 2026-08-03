@@ -27,7 +27,7 @@ export default function PdfCanvasViewer({ url, className = '' }) {
     setStatus('loading')
     setPageNumber(1)
 
-    const loadingTask = pdfjsLib.getDocument(url)
+    const loadingTask = pdfjsLib.getDocument({ url })
     loadingTask.promise
       .then((pdf) => {
         if (cancelled) return
